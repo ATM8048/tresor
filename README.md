@@ -1,25 +1,45 @@
-# Inhaltsverzeichnis Dokumentation
-- [PasswordHash](#passwordhash)
-- [Backend](#backend)
-- [Frontend](#frontend)
-- [SecretEncryption](#secretencryption)
-- [Backend](#backend-1)
-- [Frontend](#frontend-1)
+# 📚 Dokumentation
 
+## 📑 Inhaltsverzeichnis
 
-# PasswordHash
-## Backend
-### PasswordEncryptionService
-#### Konstanten
-Diese Konstanten definieren Parameter für die Passwort-Verschlüsselung: Anzahl der Iterationen, Schlüssellänge und verwendeter Algorithmus.
+- [1. Passwort Hashing](#1-passwort-hashing)
+  - [1.1 Backend](#11-backend)
+    - [1.1.1 PasswordEncryptionService](#111-passwordencryptionservice)
+      - [Konstanten](#konstanten)
+      - [Passwort-Hashing](#passwort-hashing)
+    - [1.1.2 UserController – Benutzer erstellen](#112-usercontroller--benutzer-erstellen)
+  - [1.2 Frontend](#12-frontend)
+- [2. Login](#2-login)
+  - [2.1 Backend](#21-backend)
+    - [2.1.1 PasswordEncryptionService – Passwort überprüfen](#211-passwordencryptionservice--passwort-überprüfen)
+    - [2.1.2 UserController – Login-Handling](#212-usercontroller--login-handling)
+    - [2.1.3 LoginUser – DTO](#213-loginuser--dto)
+  - [2.2 Frontend](#22-frontend)
+    - [2.2.1 FetchUser](#221-fetchuser)
+    - [2.2.2 Loginuser – handleSubmit](#222-loginuser--handlesubmit)
+- [3. Secret Encryption](#3-secret-encryption)
+
+---
+
+## 1. Passwort Hashing
+
+### 1.1 Backend
+
+#### 1.1.1 PasswordEncryptionService
+
+##### Konstanten
+
+Diese Konstanten definieren Parameter für die Passwort-Verschlüsselung:
+
 ```java
 private static final int ITERATIONS = 65536;
 private static final int KEY_LENGTH = 128;
 private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
 ```
----
-#### Passwort-Hashing
-Diese Methode erzeugt aus einem Klartext-Passwort einen sicheren Hash im Format `salt$hash`. Der Salt ist zufällig und wird Base64-kodiert gespeichert.
+
+##### Passwort-Hashing
+
+Erzeugt aus einem Klartext-Passwort einen sicheren Hash im Format `salt$hash`.
 
 ```java
 public String hashPassword(String password) {
@@ -38,28 +58,38 @@ public String hashPassword(String password) {
    }
 }
 ```
+
 ---
-### UserController
-#### createUser
-wird die neue Object User erstellt und der der Password wid übergeben mit Aufruf von hashPassword Function.
+
+#### 1.1.2 UserController – Benutzer erstellen
+
+Erstellt ein neues `User`-Objekt und hashed das Passwort mit `hashPassword()`.
+
 ```java
-//transform registerUser to user
-      User user = new User(
-            null,
-            registerUser.getFirstName(),
-            registerUser.getLastName(),
-            registerUser.getEmail(),
-            passwordService.hashPassword(registerUser.getPassword())
-            );
+User user = new User(
+   null,
+   registerUser.getFirstName(),
+   registerUser.getLastName(),
+   registerUser.getEmail(),
+   passwordService.hashPassword(registerUser.getPassword())
+);
 ```
+
 ---
-## Frontend
-In Frontend werden alle Inputs, die ein Password erwarten, werden zu type Password geändert.
-# Login
-## Backend
-### PasswordEncryptionService
-#### verifyPassword
-Diese Methode prüft, ob ein Passwort mit einem gespeicherten Hash übereinstimmt. Dazu wird der Hash rekonstruiert und verglichen.
+
+### 1.2 Frontend
+
+Alle Eingabefelder, die Passwörter erwarten, sind als `type="password"` definiert.
+
+---
+
+## 2. Login
+
+### 2.1 Backend
+
+#### 2.1.1 PasswordEncryptionService – Passwort überprüfen
+
+Vergleicht ein eingegebenes Passwort mit einem gespeicherten Hash.
 
 ```java
 public boolean verifyPassword(String password, String storedHash) {
@@ -81,50 +111,41 @@ public boolean verifyPassword(String password, String storedHash) {
    }
 }
 ```
-### UserController
-Diese Methode behandelt einen Login-POST-Request, überprüft die Eingabedaten und das Passwort, und gibt je nach Ergebnis eine JSON-Antwort mit dem Login-Status zurück.
+
+---
+
+#### 2.1.2 UserController – Login-Handling
+
+Diese Methode verarbeitet den Login eines Nutzers und gibt entsprechende JSON-Antworten zurück.
+
 ```java
- @CrossOrigin(origins = "${CROSS_ORIGIN}")
-   @PostMapping("/login")
-   public ResponseEntity<String> login(@RequestBody LoginUser loginUser, BindingResult bindingResult) {
-      // Optional: Input-Validierung
-      if (bindingResult.hasErrors()) {
-         List<String> errors = bindingResult.getFieldErrors().stream()
-                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-                 .collect(Collectors.toList());
-         JsonArray arr = new JsonArray();
-         errors.forEach(arr::add);
-         JsonObject obj = new JsonObject();
-         obj.add("message", arr);
-         String json = new Gson().toJson(obj);
-         return ResponseEntity.badRequest().body(json);
-      }
-
-      // Suche den Nutzer per E-Mail
-      User user = userService.findByEmail(loginUser.getEmail());
-      if (user == null) {
-         JsonObject obj = new JsonObject();
-         obj.addProperty("message", "Kein Benutzer mit dieser E-Mail gefunden");
-         String json = new Gson().toJson(obj);
-         return ResponseEntity.badRequest().body(json);
-      }
-
-      // Überprüfe das Passwort
-      if (!passwordService.verifyPassword(loginUser.getPassword(), user.getPassword())) {
-         JsonObject obj = new JsonObject();
-         obj.addProperty("message", "Falsche Password");
-         String json = new Gson().toJson(obj);
-         return ResponseEntity.badRequest().body(json);
-      }
-
-     // zurückgabe mit json.....
+@CrossOrigin(origins = "${CROSS_ORIGIN}")
+@PostMapping("/login")
+public ResponseEntity<String> login(@RequestBody LoginUser loginUser, BindingResult bindingResult) {
+   if (bindingResult.hasErrors()) {
+      // Fehler sammeln
    }
+
+   User user = userService.findByEmail(loginUser.getEmail());
+   if (user == null) {
+      // Fehler: Benutzer nicht gefunden
+   }
+
+   if (!passwordService.verifyPassword(loginUser.getPassword(), user.getPassword())) {
+      // Fehler: Passwort falsch
+   }
+
+   // Erfolg: Rückgabe von Login-JSON
+}
 ```
-### LoginUser
+
+---
+
+#### 2.1.3 LoginUser – DTO
+
 ```java
 @Value
 public class LoginUser {
-
     @NotEmpty(message="E-Mail is required.")
     private String email;
 
@@ -132,38 +153,53 @@ public class LoginUser {
     private String password;
 }
 ```
-## Frontend
-### FetchUser
-Es wird eine Funktion erstellt, die eine Kommunikation mit dem Backend erstellt und email und password schickt, wenn Backend ein positives Antwort antwortet, dann wird der person eingeloggt und wenn nicht wird die error message anzeigt.
+
+---
+
+### 2.2 Frontend
+
+#### 2.2.1 FetchUser
+
+Sendet die Login-Daten an das Backend und verarbeitet die Antwort.
+
 ```javascript
 export const postLogin = async (content) => {
-    const protocol = process.env.REACT_APP_API_PROTOCOL; // z.B. "http"
-    const host = process.env.REACT_APP_API_HOST; // z.B. "localhost"
-    const port = process.env.REACT_APP_API_PORT; // z.B. "8080"
-    const path = process.env.REACT_APP_API_PATH; // z.B. "/api"
-    const portPart = port ? `:${port}` : ''; // Port ist optional
-    const API_URL = `${protocol}://${host}${portPart}${path}`;
+   const protocol = process.env.REACT_APP_API_PROTOCOL;
+   const host = process.env.REACT_APP_API_HOST;
+   const port = process.env.REACT_APP_API_PORT;
+   const path = process.env.REACT_APP_API_PATH;
+   const portPart = port ? \`:\${port}\` : '';
+   const API_URL = \`\${protocol}://\${host}\${portPart}\${path}\`;
 
-    try {
-        // hier wird die Daten an Backend geschickt
-    } catch (error) {
-        // hier weden die Error von Backend angezeigt.
-    }
+   try {
+      // Daten an Backend senden
+   } catch (error) {
+      // Fehlerbehandlung
+   }
 };
 ```
-### Loginuser
-handleSubmit soll die postLogin aufrufen mit den email und password
+
+---
+
+#### 2.2.2 Loginuser – handleSubmit
+
+Ruft `postLogin` mit den eingegebenen Login-Daten auf.
+
 ```javascript
- const handleSubmit = async (e) => {
-        e.preventDefault()
-        try {
-            console.log(loginValues + "test")
-            await postLogin(loginValues);
-            navigate('/');
-        } catch (error) {
-            setLoginValues({ email: '', password: '' });
-            console.error('Failed to fetch to server:', error.message);
-        }
-    };
+const handleSubmit = async (e) => {
+   e.preventDefault()
+   try {
+      await postLogin(loginValues);
+      navigate('/');
+   } catch (error) {
+      setLoginValues({ email: '', password: '' });
+      console.error('Login fehlgeschlagen:', error.message);
+   }
+};
 ```
-# SecretEncryption
+
+---
+
+## 3. Secret Encryption
+
+*Hier kann später der Teil zu Secret Encryption ergänzt werden...*
