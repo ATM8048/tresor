@@ -10,6 +10,7 @@ import ch.bbw.pr.tresorbackend.util.EncryptUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
@@ -37,40 +38,58 @@ public class SecretController {
    @CrossOrigin(origins = "${CROSS_ORIGIN}")
    @PostMapping
    public ResponseEntity<String> createSecret2(@Valid @RequestBody NewSecret newSecret, BindingResult bindingResult) {
-      //input validation
+      // Eingabewerte validieren
       if (bindingResult.hasErrors()) {
          List<String> errors = bindingResult.getFieldErrors().stream()
-               .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
-               .collect(Collectors.toList());
-         System.out.println("SecretController.createSecret " + errors);
+                 .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                 .collect(Collectors.toList());
+         System.out.println("SecretController.createSecret: Fehler bei der Validierung " + errors);
 
+         // Fehler als JSON zurückgeben
          JsonArray arr = new JsonArray();
          errors.forEach(arr::add);
          JsonObject obj = new JsonObject();
          obj.add("message", arr);
          String json = new Gson().toJson(obj);
 
-         System.out.println("SecretController.createSecret, validation fails: " + json);
+         System.out.println("SecretController.createSecret, Validierung schlägt fehl: " + json);
          return ResponseEntity.badRequest().body(json);
       }
-      System.out.println("SecretController.createSecret, input validation passed");
 
+      System.out.println("SecretController.createSecret: Validierung erfolgreich");
+
+      // User anhand der E-Mail finden
       User user = userService.findByEmail(newSecret.getEmail());
 
-      //transfer secret and encrypt content
+      // Verschlüsselung des Contents
+      String encryptedContent = new EncryptUtil(newSecret.getEncryptPassword()).encrypt(newSecret.getContent().toString());
+
+      // Die Secret-Daten in das gewünschte Format bringen
+      JsonObject encryptedDataJson = new JsonObject();
+      encryptedDataJson.addProperty("encryptedData", encryptedContent);
+
+      // Verschlüsseltes Secret speichern
       Secret secret = new Secret(
-            null,
-            user.getId(),
-            new EncryptUtil(newSecret.getEncryptPassword()).encrypt(newSecret.getContent().toString())
+              null,
+              user.getId(),
+              encryptedDataJson.toString()  // Das verschlüsselte JSON speichern
       );
-      //save secret in db
-      secretService.createSecret(secret);
-      System.out.println("SecretController.createSecret, secret saved in db");
-      JsonObject obj = new JsonObject();
-      obj.addProperty("answer", "Secret saved");
-      String json = new Gson().toJson(obj);
-      System.out.println("SecretController.createSecret " + json);
-      return ResponseEntity.accepted().body(json);
+
+      try {
+         // Secret speichern
+         Secret saved = secretService.createSecret(secret);
+         System.out.println("SecretController.createSecret, Secret in der DB gespeichert: " + saved);
+      } catch (Exception e) {
+         e.printStackTrace();
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Fehler beim Speichern des Secrets: " + e.getMessage());
+      }
+
+      // Erfolgreiche Antwort zurückgeben
+      JsonObject responseObj = new JsonObject();
+      responseObj.addProperty("answer", "Secret saved");
+      String jsonResponse = new Gson().toJson(responseObj);
+      System.out.println("SecretController.createSecret " + jsonResponse);
+      return ResponseEntity.accepted().body(jsonResponse);
    }
 
    // Build Get Secrets by userId REST API
@@ -85,12 +104,19 @@ public class SecretController {
          return ResponseEntity.notFound().build();
       }
       //Decrypt content
-      for(Secret secret: secrets) {
+      EncryptUtil decryptor = new EncryptUtil(credentials.getEncryptPassword());
+      for (Secret secret : secrets) {
          try {
-            secret.setContent(new EncryptUtil(credentials.getEncryptPassword()).decrypt(secret.getContent()));
-         } catch (EncryptionOperationNotPossibleException e) {
-            System.out.println("SecretController.getSecretsByUserId " + e + " " + secret);
-            secret.setContent("not encryptable. Wrong password?");
+            // content ist ein JSON-String wie: {"encryptedData": "..."}
+            JsonObject contentJson = JsonParser.parseString(secret.getContent()).getAsJsonObject();
+            String encryptedValue = contentJson.get("encryptedData").getAsString();
+
+            // entschlüsseln
+            String decryptedContent = decryptor.decrypt(encryptedValue);
+            secret.setContent(decryptedContent);
+         } catch (Exception e) {
+            System.out.println("SecretController.getSecretsByEmail decryption error: " + e + " | Secret ID: " + secret.getId());
+            secret.setContent("not decryptable. Wrong password?");
          }
       }
 
@@ -112,12 +138,19 @@ public class SecretController {
          return ResponseEntity.notFound().build();
       }
       //Decrypt content
-      for(Secret secret: secrets) {
+      EncryptUtil decryptor = new EncryptUtil(credentials.getEncryptPassword());
+      for (Secret secret : secrets) {
          try {
-            secret.setContent(new EncryptUtil(credentials.getEncryptPassword()).decrypt(secret.getContent()));
-         } catch (EncryptionOperationNotPossibleException e) {
-            System.out.println("SecretController.getSecretsByEmail " + e + " " + secret);
-            secret.setContent("not encryptable. Wrong password?");
+            // content ist ein JSON-String wie: {"encryptedData": "..."}
+            JsonObject contentJson = JsonParser.parseString(secret.getContent()).getAsJsonObject();
+            String encryptedValue = contentJson.get("encryptedData").getAsString();
+
+            // entschlüsseln
+            String decryptedContent = decryptor.decrypt(encryptedValue);
+            secret.setContent(decryptedContent);
+         } catch (Exception e) {
+            System.out.println("SecretController.getSecretsByEmail decryption error: " + e + " | Secret ID: " + secret.getId());
+            secret.setContent("not decryptable. Wrong password?");
          }
       }
 

@@ -211,6 +211,7 @@ public class UserController {
       System.out.println("UserController.login, user login");
       JsonObject obj = new JsonObject();
       obj.addProperty("answer", "User Login");
+      obj.addProperty("pwd", user.getPassword());
       String json = new Gson().toJson(obj);
       System.out.println("UserController.userLogin " + json);
       return ResponseEntity.accepted().body(json);

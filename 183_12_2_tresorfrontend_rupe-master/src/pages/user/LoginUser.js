@@ -12,8 +12,10 @@ function LoginUser({ loginValues, setLoginValues }) {
         e.preventDefault()
         try {
             console.log(loginValues + "test")
-            await postLogin(loginValues);
+            const data = await postLogin(loginValues);
+            const password = data.pwd
             navigate('/');
+            setLoginValues({ email: loginValues.email, password: password })
         } catch (error) {
             setLoginValues({ email: '', password: '' });
             console.error('Failed to fetch to server:', error.message);

@@ -4,14 +4,15 @@
  */
 
 //Post secret to server
-export const postSecret = async ({loginValues, content}) => {
+export const postSecret = async ({ loginValues, content }) => {
     const protocol = process.env.REACT_APP_API_PROTOCOL; // "http"
     const host = process.env.REACT_APP_API_HOST; // "localhost"
     const port = process.env.REACT_APP_API_PORT; // "8080"
     const path = process.env.REACT_APP_API_PATH; // "/api"
     const portPart = port ? `:${port}` : ''; // port is optional
     const API_URL = `${protocol}://${host}${portPart}${path}`;
-    console.log(loginValues)
+    console.log("loginValues : " + loginValues);
+    console.log("Content: " + content);
 
     try {
         const response = await fetch(`${API_URL}/secrets`, {

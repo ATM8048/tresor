@@ -18,6 +18,13 @@
     - [2.2.1 FetchUser](#221-fetchuser)
     - [2.2.2 Loginuser – handleSubmit](#222-loginuser--handlesubmit)
 - [3. Secret Encryption](#3-secret-encryption)
+   - [3.1 Backend](#31-backend)
+      - [3.1.1 EncryptUtil – Verschlüsselung und Entschlüsselung](#311-encryptutil--verschlüsselung-und-entschlüsselung)
+      - [3.1.2 SecretController – Secret speichern](#312-secretcontroller--secret-speichern)
+      - [3.1.3 SecretController – Secret abrufen & entschlüsseln](#313-secretcontroller--secret-abrufen--entschlüsseln)
+   - [3.2 Frontend](#32-frontend)
+      - [3.2.1 FetchSecrets](#321-fetchsecrets)
+      - [3.2.2 Secrets](#322-secrets)
 
 ---
 
@@ -29,7 +36,7 @@
 
 ##### Konstanten
 
-Diese Konstanten definieren Parameter für die Passwort-Verschlüsselung:
+Diese Konstanten definieren Parameter für die Passwort-Hashing:
 
 ```java
 private static final int ITERATIONS = 65536;
@@ -202,4 +209,98 @@ const handleSubmit = async (e) => {
 
 ## 3. Secret Encryption
 
-*Hier kann später der Teil zu Secret Encryption ergänzt werden...*
+### 3.1 Backend
+
+#### 3.1.1 EncryptUtil – Verschlüsselung und Entschlüsselung
+```java
+/**
+ * Verschlüsselt einen Klartext mit AES.
+ *
+ * @param data Klartext
+ * @return Base64-kodierter verschlüsselter String
+ */
+public String encrypt(String data)
+```
+
+---
+
+```java
+/**
+ * Entschlüsselt einen zuvor verschlüsselten Base64-String.
+ *
+ * @param base64Data Verschlüsselter String im Base64-Format
+ * @return Klartext
+ */
+public String decrypt(String base64Data)
+
+
+```
+
+---
+#### 3.1.2 SecretController – Secret speichern
+- Validiert das Secret
+- Verschlüsselt den Inhalt mit EncryptUtil
+- Speichert das Secret als JSON: {"encryptedData": "<Base64>"}
+```java
+@PostMapping
+public ResponseEntity<String> createSecret2(@Valid @RequestBody NewSecret newSecret, BindingResult bindingResult)
+```
+
+---
+#### 3.1.3 SecretController – Secret abrufen & entschlüsseln
+- Findet Secrets anhand der E-Mail
+- Entschlüsselt die Inhalte mit dem übergebenen Passwort
+- Gibt die Inhalte im Klartext zurück
+- Fehlerhafte Entschlüsselung wird als "not decryptable. Wrong password?" angezeigt
+```java
+@PostMapping("/byemail")
+public ResponseEntity<List<Secret>> getSecretsByEmail(@RequestBody EncryptCredentials credentials)
+```
+
+---
+```java
+@PostMapping("/byuserid")
+public ResponseEntity<List<Secret>> getSecretsByUserId(@RequestBody EncryptCredentials credentials) {
+```
+
+---
+### 3.2 Frontend
+
+#### 3.2.1 FetchSecrets
+- Secrets for ein User anhand die Email bekommen, werden am Backend email und password geschickt, wenn die Daten korrekt sind, dann werden die Secrets zurückbekommen, wenn nicht ein Fehler.
+```javascript
+export const getSecretsforUser = async (loginValues) => {}
+
+```
+
+---
+
+- ein Secret wird erstellt, am Backend werden email, password und content geschickt, wenn alles korrekt ist, wird der Person zu all Secrets weitergeleitet, sondern wird ein Fehler angezeigt.
+```javascript
+export const postSecret = async ({ loginValues, content }) => {}
+
+```
+
+---
+
+#### 3.2.2 Secrets
+- um besser die secret kontent anzuzeigen, wird noch eine Tabelle in der Haupttabelle erstellt, und es wird key, value benutzt.
+```javascript
+<table>
+   <tbody>
+         {Object.entries(parsedContent).map(([key, value]) => (
+            <tr key={key}>
+               <td style={{ fontWeight: "bold", paddingRight: "10px" }}>{key}</td>
+               <td>
+                     {String(value)}
+               </td>
+            </tr>
+         ))}
+   </tbody>
+</table>
+```
+
+---
+
+
+
