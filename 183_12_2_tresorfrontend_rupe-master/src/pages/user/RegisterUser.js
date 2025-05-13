@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { postUser } from "../../comunication/FetchUser";
-
+import ReCAPTCHA from 'react-google-recaptcha';
 /**
  * RegisterUser
  * @author Peter Rutschmann
  */
 function RegisterUser({ loginValues, setLoginValues }) {
     const navigate = useNavigate();
+    const [captchaToken, setCaptchaToken] = useState(null);
 
+    const handleCaptchaChange = (token) => {
+        setCaptchaToken(token);
+        setCredentials(prevValues => ({ ...prevValues, recaptchaToken: token }));
+    };
     const initialState = {
         firstName: "",
         lastName: "",
         email: "",
         password: "",
         passwordConfirmation: "",
-        errorMessage: ""
+        errorMessage: "",
+        recaptchaToken: captchaToken
     };
     const [credentials, setCredentials] = useState(initialState);
     const [errorMessage, setErrorMessage] = useState('');
@@ -31,6 +37,18 @@ function RegisterUser({ loginValues, setLoginValues }) {
             return;
         }
 
+        if (!validatePassword(credentials.password)) {
+            console.log("Password ist nicht genug sicher");
+            setErrorMessage('Password ist nicht genug sicher.');
+            return;
+        }
+
+        if (!captchaToken) {
+            console.log("Du bist ein Roboter");
+            setErrorMessage('Du bist ein Roboter!');
+            return;
+        }
+
         try {
             await postUser(credentials);
             setLoginValues({ userName: credentials.email, password: credentials.password });
@@ -41,6 +59,11 @@ function RegisterUser({ loginValues, setLoginValues }) {
             setErrorMessage(error.message);
         }
     };
+
+    function validatePassword(password) {
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        return regex.test(password);
+    }
 
     return (
         <div>
@@ -103,6 +126,12 @@ function RegisterUser({ loginValues, setLoginValues }) {
                                     setCredentials(prevValues => ({ ...prevValues, passwordConfirmation: e.target.value }))}
                                 required
                                 placeholder="Please confirm your pwd *"
+                            />
+                        </div>
+                        <div>
+                            <ReCAPTCHA
+                                sitekey="6Ld2FzgrAAAAADKrzKRN8tYbOAnUDfAzMwuZKJW-"
+                                onChange={handleCaptchaChange}
                             />
                         </div>
                     </aside>
