@@ -25,12 +25,12 @@
    - [3.2 Frontend](#32-frontend)
       - [3.2.1 FetchSecrets](#321-fetchsecrets)
       - [3.2.2 Secrets](#322-secrets)
-[4. Password Sicherheit](#4-password-sicherheit)
+- [4. Password Sicherheit](#4-password-sicherheit)
    - [4.1 Backend](#41-backend)
       - [4.1.1 RegisterUser](#411-registeruser)
    - [4.2 Frontend](#42-frontend)
       - [4.2.1 RegisterUser](#421-registeruser)
-[5. ReCAPTCHA](#5-recaptcha)
+- [5. ReCAPTCHA](#5-recaptcha)
    - [5.1 Backend](#51-backend)
       - [5.1.1 captchaValidator](#511-captchavalidator)
       - [5.1.2 UserController](#512-usercontroller)
@@ -320,9 +320,9 @@ das Password muss folgendes haben:
 - mindestens eine Ziffer: (?=.*\d)
 - mindestens ein Sonderzeichen: (?=.*[@$!%*?&])
 - Gesamtlänge mindestens 8 Zeichen
-### 3.1 Backend
+### 4.1 Backend
 In Backend wird nur das Dto für Registrieren geändert:
-#### 3.1.1 RegisterUser
+#### 4.1.1 RegisterUser
 ```java
 @NotEmpty (message="Password is required.")
 @Pattern(
@@ -401,11 +401,11 @@ if (!captchaValid) {
 
 ---
 
-### 4.2 Frontend
+### 5.2 Frontend
 Recaptcha in Googgle erstellen: [Link](https://www.google.com/recaptcha/admin/site/725096310/setup)
 Installieren von react-google-recaptcha
 
-#### 4.2.1 RegisterUser
+#### 5.2.1 RegisterUser
 ```javascript
 const [captchaToken, setCaptchaToken] = useState(null);
 const handleCaptchaChange = (token) => {
