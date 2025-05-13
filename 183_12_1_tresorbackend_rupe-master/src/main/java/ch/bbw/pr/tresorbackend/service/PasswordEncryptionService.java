@@ -15,7 +15,6 @@ import java.util.Base64;
  */
 @Service
 public class PasswordEncryptionService {
-   //todo ergänzen!
    private static final int ITERATIONS = 65536;
    private static final int KEY_LENGTH = 128;
    private static final String ALGORITHM = "PBKDF2WithHmacSHA256";

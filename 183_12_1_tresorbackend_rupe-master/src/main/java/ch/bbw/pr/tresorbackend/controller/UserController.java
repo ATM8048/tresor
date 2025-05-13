@@ -1,6 +1,7 @@
 package ch.bbw.pr.tresorbackend.controller;
 
 import ch.bbw.pr.tresorbackend.model.*;
+import ch.bbw.pr.tresorbackend.service.CaptchaValidator;
 import ch.bbw.pr.tresorbackend.service.PasswordEncryptionService;
 import ch.bbw.pr.tresorbackend.service.UserService;
 
@@ -31,12 +32,14 @@ public class UserController {
 
    private UserService userService;
    private PasswordEncryptionService passwordService;
+
+   private CaptchaValidator captchaValidator;
    private final ConfigProperties configProperties;
    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
    @Autowired
    public UserController(ConfigProperties configProperties, UserService userService,
-                         PasswordEncryptionService passwordService) {
+                         PasswordEncryptionService passwordService, CaptchaValidator captchaValidator) {
       this.configProperties = configProperties;
       System.out.println("UserController.UserController: cross origin: " + configProperties.getOrigin());
       // Logging in the constructor
@@ -44,6 +47,7 @@ public class UserController {
       logger.debug("UserController.UserController: Cross Origin Config: {}", configProperties.getOrigin());
       this.userService = userService;
       this.passwordService = passwordService;
+      this.captchaValidator = captchaValidator;
    }
 
    // build create User REST API
@@ -51,7 +55,13 @@ public class UserController {
    @PostMapping
    public ResponseEntity<String> createUser(@Valid @RequestBody RegisterUser registerUser, BindingResult bindingResult) {
       //captcha
-      //todo ergänzen
+      boolean captchaValid = captchaValidator.verify(registerUser.getRecaptchaToken());
+
+      if (!captchaValid) {
+         return ResponseEntity
+                 .status(HttpStatus.BAD_REQUEST)
+                 .body("Invalid captcha token. Are you a robot?");
+      }
 
       System.out.println("UserController.createUser: captcha passed.");
 

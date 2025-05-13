@@ -24,10 +24,15 @@ public class RegisterUser {
    private String email;
 
    @NotEmpty (message="Password is required.")
+   @Pattern(
+           regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+           message = "Passwort muss mindestens 8 Zeichen lang sein, einen Großbuchstaben, einen Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten."
+   )
    private String password;
 
    @NotEmpty (message="Password-confirmation is required.")
    private String passwordConfirmation;
 
+   @NotEmpty(message = "Captcha token is required")
    private String recaptchaToken;
 }
