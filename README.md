@@ -25,6 +25,18 @@
    - [3.2 Frontend](#32-frontend)
       - [3.2.1 FetchSecrets](#321-fetchsecrets)
       - [3.2.2 Secrets](#322-secrets)
+[4. Password Sicherheit](#4-password-sicherheit)
+   - [4.1 Backend](#41-backend)
+      - [4.1.1 RegisterUser](#411-registeruser)
+   - [4.2 Frontend](#42-frontend)
+      - [4.2.1 RegisterUser](#421-registeruser)
+[5. ReCAPTCHA](#5-recaptcha)
+   - [5.1 Backend](#51-backend)
+      - [5.1.1 captchaValidator](#511-captchavalidator)
+      - [5.1.2 UserController](#512-usercontroller)
+   - [5.2 Frontend](#52-frontend)
+      - [5.2.1 RegisterUser](#521-registeruser)
+
 
 ---
 
@@ -301,6 +313,121 @@ export const postSecret = async ({ loginValues, content }) => {}
 ```
 
 ---
+## 4. Password Sicherheit
+das Password muss folgendes haben:
+- mindestens eine Kleinbuchstabe: (?=.*[a-z])
+- mindestens ein Großbuchstabe: (?=.*[A-Z])
+- mindestens eine Ziffer: (?=.*\d)
+- mindestens ein Sonderzeichen: (?=.*[@$!%*?&])
+- Gesamtlänge mindestens 8 Zeichen
+### 3.1 Backend
+In Backend wird nur das Dto für Registrieren geändert:
+#### 3.1.1 RegisterUser
+```java
+@NotEmpty (message="Password is required.")
+@Pattern(
+         regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+         message = "Passwort muss mindestens 8 Zeichen lang sein, einen Großbuchstaben, einen Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten."
+)
+private String password;
+```
 
+---
+### 4.1 Frontend
+In Frontend wird Funktion validatePassword geschrieben und die dann in handleSubmit aufgerufen.
+#### 4.1.1 RegisterUser
+```javascript 
+function validatePassword(password) {
+      const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      return regex.test(password);
+   }
+```
+
+---
+## 5. ReCAPTCHA
+Doku: [Doku von Google](https://developers.google.com/recaptcha/docs/verify)
+### 5.1 Backend
+in Application.properties Key unter eingeben: google.recaptcha.secret
+Dependecy für danach ein Request am google zu schicken in pom.xml einfügen:
+```java
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-webflux</artifactId>
+   <version>3.4.5</version>
+</dependency>
+```
+
+---
+#### 5.1.1 captchaValidator
+```java
+   @Value("${google.recaptcha.secret}")
+   private String secret;
+
+   private final WebClient webClient = WebClient.create("https://www.google.com");
+
+   public boolean verify(String token) {
+      String url = "/recaptcha/api/siteverify";
+
+      Map<String, String> request = Map.of(
+               "secret", secret,
+               "response", token
+      );
+
+      Map response = webClient.post()
+               .uri("/recaptcha/api/siteverify")
+               .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+               .body(BodyInserters
+                     .fromFormData("secret", secret)
+                     .with("response", token))
+               .retrieve()
+               .bodyToMono(Map.class)
+               .block();
+
+      return response != null && Boolean.TRUE.equals(response.get("success"));
+   }
+```
+
+---
+#### 5.1.2 UserController
+in createUser eingeben:
+```java
+boolean captchaValid = captchaValidator.verify(registerUser.getRecaptchaToken());
+if (!captchaValid) {
+   return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body("Invalid captcha token. Are you a robot?");
+}
+```
+
+---
+
+### 4.2 Frontend
+Recaptcha in Googgle erstellen: [Link](https://www.google.com/recaptcha/admin/site/725096310/setup)
+Installieren von react-google-recaptcha
+
+#### 4.2.1 RegisterUser
+```javascript
+const [captchaToken, setCaptchaToken] = useState(null);
+const handleCaptchaChange = (token) => {
+   setCaptchaToken(token);
+   setCredentials(prevValues => ({ ...prevValues, recaptchaToken: token }));
+};
+
+```
+
+---
+
+in Form einfügen
+```javascript
+<div>
+      <ReCAPTCHA
+         sitekey="site_key"
+         onChange={handleCaptchaChange}
+      />
+</div>
+
+```
+
+---
 
 
